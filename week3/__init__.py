@@ -6,10 +6,11 @@ import pandas as pd
 import fasttext
 from pathlib import Path
 
+
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-    
+
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_envvar('LTR_APPLICATION_SETTINGS', silent=True)
@@ -22,7 +23,7 @@ def create_app(test_config=None):
             app.config["priors_gb"] = priors_gb
         else:
             print("No prior clicks to load.  This may effect quality. Run ltr-end-to-end.sh per week 2 if you want")
-        #print(app.config)
+        # print(app.config)
         SYNS_MODEL_LOC = os.environ.get("SYNONYMS_MODEL_LOC", "/workspace/datasets/fasttext/syns_model.bin")
         print("SYNS_MODEL_LOC: %s" % SYNS_MODEL_LOC)
         if SYNS_MODEL_LOC and os.path.isfile(SYNS_MODEL_LOC):
@@ -40,11 +41,9 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-
-
     # A simple landing page
-    #@app.route('/')
-    #def index():
+    # @app.route('/')
+    # def index():
     #    return render_template('index.jinja2')
 
     from . import search
