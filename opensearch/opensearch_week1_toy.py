@@ -3,13 +3,13 @@
 
 from opensearchpy import OpenSearch
 
-host = 'localhost'
+host = "localhost"
 port = 9200
-auth = ('admin', 'admin')  # For testing only. Don't store credentials in code.
+auth = ("admin", "admin")  # For testing only. Don't store credentials in code.
 
 # Create the client with SSL/TLS enabled, but hostname and certificate verification disabled.
 client = OpenSearch(
-    hosts=[{'host': host, 'port': port}],
+    hosts=[{"host": host, "port": port}],
     http_compress=True,  # enables gzip compression for request bodies
     http_auth=auth,
     # client_cert = client_cert_path,
@@ -28,16 +28,8 @@ print(client.cat.indices())
 print(client.cat.count("searchml_test", params={"v": "true"}))
 
 # Create an index with non-default settings.
-index_name = 'searchml_revisited'
-index_body = {
-    'settings': {
-        'index': {
-            'query': {
-                'default_field': "body"
-            }
-        }
-    }
-}
+index_name = "searchml_revisited"
+index_body = {"settings": {"index": {"query": {"default_field": "body"}}}}
 
 client.indices.create(index_name, body=index_body)
 
@@ -50,39 +42,38 @@ docs = [
         "body": "The quick red fox jumped over the lazy brown dogs.",
         "price": "5.99",
         "in_stock": True,
-        "category": "childrens"},
+        "category": "childrens",
+    },
     {
         "id": "doc_b",
         "title": "Fox wins championship",
         "body": "Wearing all red, the Fox jumped out to a lead in the race over the Dog.",
         "price": "15.13",
         "in_stock": True,
-        "category": "sports"},
+        "category": "sports",
+    },
     {
         "id": "doc_c",
         "title": "Lead Paint Removal",
         "body": "All lead must be removed from the brown and red paint.",
         "price": "150.21",
         "in_stock": False,
-        "category": "instructional"},
+        "category": "instructional",
+    },
     {
         "id": "doc_d",
         "title": "The Three Little Pigs Revisted",
         "price": "3.51",
         "in_stock": True,
         "body": "The big, bad wolf huffed and puffed and blew the house down. The end.",
-        "category": "childrens"}
+        "category": "childrens",
+    },
 ]
 
 for doc in docs:
     doc_id = doc["id"]
     print("Indexing {}".format(doc_id))
-    client.index(
-        index=index_name,
-        body=doc,
-        id=doc_id,
-        refresh=True
-    )
+    client.index(index=index_name, body=doc, id=doc_id, refresh=True)
 
 # Verify they are in:
 print(client.cat.count(index_name, params={"v": "true"}))
@@ -92,24 +83,18 @@ print(client.cat.count(index_name, params={"v": "true"}))
 print(client.indices.get_mapping(index_name))
 
 # Create a new index, this time with different mappings
-index_name = 'searchml_revisited_custom_mappings'
+index_name = "searchml_revisited_custom_mappings"
 index_body = {
-    'settings': {
-        'index': {
-            'query': {
-                'default_field': "body"
-            }
-        }
-    },
+    "settings": {"index": {"query": {"default_field": "body"}}},
     "mappings": {
         "properties": {
             "title": {"type": "text", "analyzer": "english"},
             "body": {"type": "text", "analyzer": "english"},
             "in_stock": {"type": "boolean"},
             "category": {"type": "keyword", "ignore_above": "256"},
-            "price": {"type": "float"}
+            "price": {"type": "float"},
         }
-    }
+    },
 }
 
 client.indices.create(index_name, body=index_body)
@@ -118,170 +103,99 @@ client.indices.create(index_name, body=index_body)
 for doc in docs:
     doc_id = doc["id"]
     print("Indexing {}".format(doc_id))
-    response = client.index(
-        index=index_name,
-        body=doc,
-        id=doc_id,
-        refresh=True
-    )
-    print('\n\tResponse:')
+    response = client.index(index=index_name, body=doc, id=doc_id, refresh=True)
+    print("\n\tResponse:")
     print(response)
 
 # Do some searches
-q = 'dogs'
+q = "dogs"
 query = {
-    'size': 5,
-    'query': {
-        'multi_match': {
-            'query': q,
-            'fields': ['title^2', 'body']
-        }
-    }
+    "size": 5,
+    "query": {"multi_match": {"query": q, "fields": ["title^2", "body"]}},
 }
 
-client.search(
-    body=query,
-    index=index_name
-)
+client.search(body=query, index=index_name)
 
 # try a phrase query
-q = 'fox dog'
-query = {
-    'size': 5,
-    'query': {
-        'match_phrase': {
-            'body': {"query": q}
-        }
-    }
-}
+q = "fox dog"
+query = {"size": 5, "query": {"match_phrase": {"body": {"query": q}}}}
 
-client.search(
-    body=query,
-    index=index_name
-)
+client.search(body=query, index=index_name)
 
 # try a phrase query with slop
-q = 'fox dog'
-query = {
-    'size': 5,
-    'query': {
-        'match_phrase': {
-            'body': {"query": q, "slop": 10}
-        }
-    }
-}
+q = "fox dog"
+query = {"size": 5, "query": {"match_phrase": {"body": {"query": q, "slop": 10}}}}
 
-client.search(
-    body=query,
-    index=index_name
-)
+client.search(body=query, index=index_name)
 
 # try a match all query with a filter and a price factor
 query = {
-    'size': 5,
-    'query': {
+    "size": 5,
+    "query": {
         "function_score": {
             "query": {
                 "bool": {
-                    "must": [
-                        {"match_all": {}}
-                    ],
-                    "filter": [
-                        {"term": {"category": "childrens"}}
-                    ]
+                    "must": [{"match_all": {}}],
+                    "filter": [{"term": {"category": "childrens"}}],
                 }
             },
-            "field_value_factor": {
-                "field": "price",
-                "missing": 1
-            }
+            "field_value_factor": {"field": "price", "missing": 1},
         }
-    }
+    },
 }
 
-client.search(
-    body=query,
-    index=index_name
-)
+client.search(body=query, index=index_name)
 
 ###################
 # Aggregations
 
 query = {
-    'size': 0,
-    'query': {
-        "match_all": {}
-    },
-    'aggs': {
+    "size": 0,
+    "query": {"match_all": {}},
+    "aggs": {
         "category": {
             "terms": {
                 "field": "category",
                 "size": 10,
                 "missing": "N/A",
-                "min_doc_count": 0
+                "min_doc_count": 0,
             }
         }
-    }
+    },
 }
 
-client.search(
-    body=query,
-    index=index_name
-)
+client.search(body=query, index=index_name)
 
 # Terms on price
 query = {
-    'size': 0,
-    'query': {
-        "match_all": {}
-    },
-    'aggs': {
-        "price": {
-            "terms": {
-                "field": "price",
-                "size": 10,
-                "min_doc_count": 0
-            }
-        }
-    }
+    "size": 0,
+    "query": {"match_all": {}},
+    "aggs": {"price": {"terms": {"field": "price", "size": 10, "min_doc_count": 0}}},
 }
 
-client.search(
-    body=query,
-    index=index_name
-)
+client.search(body=query, index=index_name)
 
 # Range aggregation
 query = {
-    'size': 0,
-    'query': {
-        "match_all": {}
-    },
-    'aggs': {
+    "size": 0,
+    "query": {"match_all": {}},
+    "aggs": {
         "price": {
             "range": {
                 "field": "price",
                 "ranges": [
-                    {
-                        "to": 5
-                    },
-                    {
-                        "from": 5,
-                        "to": 20
-                    },
+                    {"to": 5},
+                    {"from": 5, "to": 20},
                     {
                         "from": 20,
-                    }
-                ]
+                    },
+                ],
             }
         }
-    }
+    },
 }
 
-client.search(
-body = query,
-index = index_name
-)
+client.search(body=query, index=index_name)
 
 ######################################
 #####
@@ -293,17 +207,15 @@ for doc in docs:
     doc_id = doc["id"]
 print("Indexing {}".format(doc_id))
 response = client.delete(
-index = index_name,
-id = doc_id,
+    index=index_name,
+    id=doc_id,
 )
-print('\n\tResponse:')
+print("\n\tResponse:")
 print(response)
 
 # If at any time you want to start over, run this command to delete the index and then you can start from the toop
 # Delete the index.
-response = client.indices.delete(
-index = index_name
-)
+response = client.indices.delete(index=index_name)
 
-print('\nDeleting index:')
+print("\nDeleting index:")
 print(response)
