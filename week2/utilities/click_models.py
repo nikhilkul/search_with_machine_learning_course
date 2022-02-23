@@ -10,10 +10,13 @@ def binary_func(x):
 
 
 def step(x):
-    print(
-        "IMPLEMENT ME: step(x) a step function with a simple heuristic that buckets grades"
-    )
-    return rng.choice([0, 0.5, 1.0])
+    if x < 0.05:
+        return 0
+    elif 0.05 <= x < 0.10:
+        return 0.50
+    elif 0.10 <= x < 0.30:
+        return 0.75
+    return 1
 
 
 rng = np.random.default_rng(123456)
@@ -40,7 +43,8 @@ def apply_click_model(data_frame, click_model_type="binary", downsample=True):
             .fillna(0)
             .apply(lambda x: step(x))
         )
-        print("IMPLEMENT ME: apply_click_model(): downsampling")
+        if downsample:
+            data_frame = down_sample_buckets(data_frame)
     return data_frame
 
 
