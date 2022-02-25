@@ -157,6 +157,8 @@ def evaluate_test_set(
             main_query_weight=main_query_weight,
             rescore_query_weight=rescore_query_weight,
         )
+        # from pprint import pprint
+        # pprint(json.dumps(ltr_simple_query_obj))
         __judge_hits(
             test_skus_for_query,
             index,
