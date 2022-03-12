@@ -12,8 +12,12 @@ def create_app(test_config=None):
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
-        app.config.from_pyfile('config.py', silent=True)
-        QUERY_CLASS_MODEL_LOC = os.environ.get("QUERY_CLASS_MODEL_LOC", "/workspace/datasets/fasttext/query_model.bin")
+        app.config.from_pyfile("config.py", silent=True)
+        # QUERY_CLASS_MODEL_LOC = os.environ.get("QUERY_CLASS_MODEL_LOC", "/workspace/datasets/fasttext/query_model.bin")
+        QUERY_CLASS_MODEL_LOC = os.environ.get(
+            "QUERY_CLASS_MODEL_LOC",
+            "/workspace/search_with_machine_learning_course/model_nikhil_1000.bin",
+        )
         if QUERY_CLASS_MODEL_LOC and os.path.isfile(QUERY_CLASS_MODEL_LOC):
             app.config["query_model"] = fasttext.load_model(QUERY_CLASS_MODEL_LOC)
         else:
@@ -37,7 +41,8 @@ def create_app(test_config=None):
     #    return render_template('index.jinja2')
 
     from . import search
+
     app.register_blueprint(search.bp)
-    app.add_url_rule('/', view_func=search.query)
+    app.add_url_rule("/", view_func=search.query)
 
     return app
