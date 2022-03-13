@@ -1,9 +1,13 @@
-import os
+import re
 import argparse
 import xml.etree.ElementTree as ET
 import pandas as pd
 import numpy as np
 import csv
+from nltk import word_tokenize
+from functools import lru_cache
+
+nltk.download("punkt")
 
 # Useful if you want to perform stemming.
 import nltk
@@ -56,9 +60,29 @@ df = pd.read_csv(queries_file_name)[["category", "query"]]
 df = df[df["category"].isin(categories)]
 
 # IMPLEMENT ME: Convert queries to lowercase, and optionally implement other normalization, like stemming.
+@lru_cache
+def clean_query(query, simple=False):
+    if simple:
+        return query.strip().lower()
+    words = word_tokenize(query)
+    words = [stemmer.stem(word.lower()) for word in words if (word.isalnum())]
+    if len(words) == 0:
+        return np.nan
+    else:
+        clean_query = " ".join(words)
+    return clean_query
+
+
+df["clean_query"] = df["query"].apply(clean_query)
+df = df.dropna()
 
 # IMPLEMENT ME: Roll up categories to ancestors to satisfy the minimum number of queries per category.
-
+df = df.join(parents_df.set_index("category"), on="category")
+df["parent_g"] = df.groupby("parent")["clean_query"].transform(lambda x: len(set(x)))
+df["cat_g"] = df.groupby("category")["clean_query"].transform(lambda x: len(set(x)))
+df.loc[df["parent_g"] < min_queries, "drop"] = 1
+df.drop(df.index[df["drop"] == 1], inplace=True)
+print("How many unique cateogies: ", len(df["category"].unique()))
 # Create labels in fastText format.
 df["label"] = "__label__" + df["category"]
 

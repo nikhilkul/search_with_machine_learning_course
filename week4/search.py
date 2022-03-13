@@ -9,6 +9,10 @@ import week4.utilities.query_utils as qu
 import week4.utilities.ltr_utils as lu
 
 bp = Blueprint("search", __name__, url_prefix="/search")
+import nltk
+
+stemmer = nltk.stem.PorterStemmer()
+from nltk import word_tokenize
 
 
 # Process the filters requested by the user and return a tuple that is appropriate for use in: the query, URLs displaying the filter and the display of the applied filters
@@ -64,9 +68,27 @@ def process_filters(filters_input):
     return filters, display_filters, applied_filters
 
 
+def clean_query(query, simple=False):
+    if simple:
+        return query.strip().lower()
+    words = word_tokenize(query)
+    words = [stemmer.stem(word.lower()) for word in words if (word.isalnum())]
+    if len(words) == 0:
+        return ""
+    else:
+        clean_query = " ".join(words)
+    return clean_query
+
+
 def get_query_category(user_query, query_class_model):
-    print("IMPLEMENT ME: get_query_category")
-    return None
+    categories = []
+    user_query = clean_query(user_query, simple=True)
+    predicted_cats, confidence = query_class_model.predict(user_query, 5)
+    categories += [
+        (category.replace("__label__", ""), confidence)
+        for category, confidence in zip(predicted_cats, confidence)
+    ]
+    return categories
 
 
 @bp.route("/query", methods=["GET", "POST"])
@@ -153,7 +175,7 @@ def query():
             explain = True
         if filters_input:
             (filters, display_filters, applied_filters) = process_filters(filters_input)
-        model = request.args.get("model", "simiple")
+        model = request.args.get("model", "simple")
         if model == "simple_LTR":
             query_obj = qu.create_simple_baseline(
                 user_query, click_prior, filters, sort, sortDir, size=500
@@ -191,11 +213,25 @@ def query():
 
     query_class_model = current_app.config["query_model"]
     query_category = get_query_category(user_query, query_class_model)
-    if query_category is not None:
-        print(
-            "IMPLEMENT ME: add this into the filters object so that it gets applied at search time.  This should look like your `term` filter from week 1 for department but for categories instead"
-        )
-    # print("query obj: {}".format(query_obj))
+    del query_obj['aggs']
+    
+    if query_category:
+        cat_filter = []
+        cat_filter_dict = {}
+        for cat, conf in query_category:
+            if cat not in cat_filter_dict:
+                cat_filter_dict[cat] = conf
+            else:
+                cat_filter_dict[cat] += conf
+            if cat_filter_dict[cat] > 0.3:
+                cat_filter.append(cat)
+        combined_cat_filter = [{"term": {"categoryPathIds": ca_f}} for ca_f in cat_filter]
+        print(combined_cat_filter)
+
+        query_obj['query']["bool"]["filter"] = {"bool":{"must":combined_cat_filter}}
+    
+    from pprint import pprint
+    pprint(query_obj)
     response = opensearch.search(
         body=query_obj, index=current_app.config["index_name"], explain=explain
     )
